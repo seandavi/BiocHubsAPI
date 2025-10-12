@@ -9,6 +9,12 @@ import click
 
 load_dotenv()
 
+@click.group()
+def cli():
+    """Top-level CLI group for the api1 tool."""
+    pass
+
+
 AH_SQLITE_URL = "https://annotationhub.bioconductor.org/metadata/annotationhub.sqlite3"
 
 def get_duckdb_connection():
@@ -99,12 +105,36 @@ def main():
         copy_single_table(conn, "ah_sqlite", table_name, 'ah_postgres', table_name)
 
     logger.info("All tables copied successfully.")
+    
+
+@cli.command(name='pg-dump-schema') 
+def dump_postgresql_schema_from_duckdb():
+    # Dump the PostgreSQL schema from DuckDB to a SQL file
+    conn = get_duckdb_connection()
+    attach_extension(conn, 'postgres')
+    
+    # Read Postgres URI from environment variable POSTGRES_URI
+    postgres_uri = os.environ.get("POSTGRES_URI")
+    if not postgres_uri:
+        logger.error("Environment variable POSTGRES_URI is not set. Set it in a .env file or the environment.")
+        raise RuntimeError("POSTGRES_URI not set")
+    
+    attach_postgres_database(conn, postgres_uri, "ah_postgres")
+    
+    # Get the schema creation statements
+    result = conn.execute("""
+        SELECT *
+        FROM information_schema.columns
+        WHERE table_catalog = 'ah_postgres'
+    """).pl()
+    
+    schema_file = "postgres_schema.csv"
+    result.write_csv(schema_file)
+    
+    logger.info(f"PostgreSQL schema dumped to {schema_file}")
 
 
-@click.group()
-def cli():
-    """Top-level CLI group for the api1 tool."""
-    pass
+
 
 
 @cli.command(name="mirror")
