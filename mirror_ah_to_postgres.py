@@ -5,6 +5,7 @@ import pathlib
 import datetime
 from loguru import logger
 from dotenv import load_dotenv
+import click
 
 load_dotenv()
 
@@ -99,5 +100,18 @@ def main():
 
     logger.info("All tables copied successfully.")
 
-if __name__ == "__main__":
+
+@click.group()
+def cli():
+    """Top-level CLI group for the api1 tool."""
+    pass
+
+
+@cli.command(name="mirror")
+def mirror_command():
+    """Mirror the AnnotationHub SQLite to Postgres."""
     main()
+if __name__ == "__main__":
+    cli()
+
+
