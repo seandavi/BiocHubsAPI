@@ -5,9 +5,19 @@ from fastapi import FastAPI, Query, HTTPException, Depends
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy import select, and_, func, desc
 from dotenv import load_dotenv
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import Response
+import time
+import json
+import sys
+from loguru import logger
 
 from hubs_api.pydantic_models import ResourceListResponse, ResourceModel
 from . import models
+
+logger.remove()
+logger.add(sys.stdout, format="{message}", serialize=False)
 
 load_dotenv()
 
@@ -179,6 +189,42 @@ def apply_sorting(query, table, sort: Optional[str]):
     return query
 
 
+class JSONLoggingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        start_time = time.time()
+        response: Response = await call_next(request)
+        process_time = time.time() - start_time
+        # Parse query params into a dict (support multi-values)
+        qp = {}
+        for key, value in request.query_params.multi_items():
+            # accumulate multiple values under same key as list
+            if key in qp:
+                existing = qp[key]
+                if isinstance(existing, list):
+                    existing.append(value)
+                else:
+                    qp[key] = [existing, value]
+            else:
+                qp[key] = value
+
+        log_data = {
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+            "method": request.method,
+            "path": request.url.path,
+            "query_string": request.url.query,
+            "query_params": qp,
+            "status_code": response.status_code,
+            "duration_ms": int(process_time * 1000),
+            "client_ip": request.client.host if request.client else None,
+            "user_agent": request.headers.get("user-agent"),
+        }
+        logger.info(json.dumps(log_data))
+        return response
+
+
+app.add_middleware(JSONLoggingMiddleware)
+
+
 @app.get("/")
 async def root():
     """Root endpoint with API information."""
@@ -312,7 +358,8 @@ async def list_resources(
     # Count total (before pagination)
     count_query = select(func.count()).select_from(query.subquery())
     total_result = await db.execute(count_query)
-    total = int(total_result.scalar()) if total_result else 0
+    _total_val = total_result.scalar() if total_result else 0
+    total = int(_total_val or 0)
     
     # Apply pagination
     query = query.limit(limit).offset(offset)

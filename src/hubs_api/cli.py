@@ -32,6 +32,7 @@ def serve(host: str, port: int, reload: bool):
         host=host,
         port=port,
         reload=reload,
+        access_log=False,
     )
 
 
