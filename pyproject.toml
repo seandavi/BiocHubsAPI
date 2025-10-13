@@ -20,7 +20,7 @@ dependencies = [
 ]
 
 [project.scripts]
-cli = "hubs_api.cli:cli"
+hubs-api = "hubs_api.cli:cli"
 
 [build-system]
 requires = ["uv_build>=0.9.2,<0.10.0"]
