@@ -3,10 +3,10 @@ import os
 from typing import Optional, Annotated
 from fastapi import FastAPI, Query, HTTPException, Depends
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy import select, and_, func
+from sqlalchemy import select, and_, func, desc
 from dotenv import load_dotenv
 
-from hubs_api.pydantic_models import ResourceListResponse
+from hubs_api.pydantic_models import ResourceListResponse, ResourceModel
 from . import models
 
 load_dotenv()
@@ -241,11 +241,11 @@ async def list_resources(
     Supports various operators via field suffixes:
     
     - **Exact match**: `?species=Homo sapiens`
-    - **Contains**: `?title__contains=RNA` (case-sensitive)
+    - **Contains**: `?title__contains=RNA`
     - **Case-insensitive contains**: `?description__icontains=chip-seq`
-    - **In list**: `?genome__in=GRCh38,GRCh37,mm10` (comma-separated)
+    - **In list**: `?genome__in=GRCh38,GRCh37,mm10`
     - **Comparison**: `?rdatadateadded__gte=2023-01-01&rdatadateadded__lte=2024-01-01`
-    
+
     ## Pagination
     
     - `limit`: Max results (1-1000, default 100)
@@ -258,9 +258,9 @@ async def list_resources(
     
     ## Examples
     
-    - `/resources?species=Homo sapiens&limit=10`
-    - `/resources?genome__in=GRCh38,GRCh37&sort=-rdatadateadded`
-    - `/resources?description__icontains=chip&rdatadateadded__gte=2023-01-01`
+    - `?species=Homo sapiens&limit=10`
+    - `?genome__in=GRCh38,GRCh37&sort=-rdatadateadded`
+    - `?description__icontains=chip&rdatadateadded__gte=2023-01-01`
     """
     # Collect all query parameters
     filter_params = {}
@@ -312,7 +312,7 @@ async def list_resources(
     # Count total (before pagination)
     count_query = select(func.count()).select_from(query.subquery())
     total_result = await db.execute(count_query)
-    total = total_result.scalar()
+    total = int(total_result.scalar()) if total_result else 0
     
     # Apply pagination
     query = query.limit(limit).offset(offset)
@@ -324,7 +324,7 @@ async def list_resources(
     # Convert to dictionaries
     resources_list = []
     for row in rows:
-        resources_list.append({
+        resource_dict = {
             "id": row.id,
             "ah_id": row.ah_id,
             "title": row.title,
@@ -342,15 +342,16 @@ async def list_resources(
             "rdatadateremoved": row.rdatadateremoved.isoformat() if row.rdatadateremoved else None,
             "record_id": row.record_id,
             "preparerclass": row.preparerclass,
-        })
+        }
+        resources_list.append(ResourceModel(**resource_dict))
     
-    return {
-        "total": total,
-        "limit": limit,
-        "offset": offset,
-        "count": len(resources_list),
-        "results": resources_list,
-    }
+    return ResourceListResponse(
+        total=total,
+        limit=limit,
+        offset=offset,
+        count=len(resources_list),
+        results=resources_list,
+    )
 
 
 @app.get("/health")
@@ -359,5 +360,16 @@ async def health_check(db: AsyncSession = Depends(get_db)):
     try:
         await db.execute(select(1))
         return {"status": "healthy", "database": "connected"}
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Database error: {str(e)}")
+
+@app.get("/species")
+async def get_species(db: AsyncSession = Depends(get_db)):
+    """Get a list of all species."""
+    try:
+        sql = select(models.resources.c.species, func.count().label('count')).group_by(models.resources.c.species).order_by(desc('count'))
+        result = await db.execute(sql)
+        resp = [{"species": row[0], "count": row[1]} for row in result.fetchall()]
+        return resp
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"Database error: {str(e)}")
