@@ -150,25 +150,50 @@ class DataMigrator:
         """Extract unique species from SQLite and create in PostgreSQL."""
         print("  Extracting species...")
 
+        # Group by taxonomy_id to handle duplicates (same tax ID, different names)
         cursor = sqlite_conn.execute("""
-            SELECT DISTINCT species, taxonomyid
+            SELECT species, taxonomyid, COUNT(*) as cnt
             FROM resources
             WHERE species IS NOT NULL AND taxonomyid IS NOT NULL
-            ORDER BY species
+            GROUP BY taxonomyid, species
+            ORDER BY taxonomyid, cnt DESC
         """)
 
-        count = 0
+        # Track taxonomy IDs to handle duplicates
+        taxonomy_id_map = {}  # taxonomy_id -> species_name
+        species_data = []
+
         for row in cursor:
-            species_name, taxonomy_id = row
+            species_name, taxonomy_id, count = row
+
+            # Use the first (most common) name for each taxonomy_id
+            if taxonomy_id not in taxonomy_id_map:
+                taxonomy_id_map[taxonomy_id] = species_name
+                species_data.append((species_name, taxonomy_id))
+
+        # Create species records
+        count = 0
+        for species_name, taxonomy_id in species_data:
             if species_name not in self.species_cache:
-                species = Species(
-                    scientific_name=species_name,
-                    taxonomy_id=taxonomy_id
+                # Check if species with this taxonomy_id already exists in DB
+                result = await session.execute(
+                    select(Species).where(Species.taxonomy_id == taxonomy_id)
                 )
-                session.add(species)
-                await session.flush()
-                self.species_cache[species_name] = species.id
-                count += 1
+                existing = result.scalar_one_or_none()
+
+                if existing:
+                    # Already exists, just cache it
+                    self.species_cache[species_name] = existing.id
+                else:
+                    # Create new species
+                    species = Species(
+                        scientific_name=species_name,
+                        taxonomy_id=taxonomy_id
+                    )
+                    session.add(species)
+                    await session.flush()
+                    self.species_cache[species_name] = species.id
+                    count += 1
 
         await session.commit()
         print(f"    Created {count} species (total: {len(self.species_cache)})")
@@ -190,14 +215,26 @@ class DataMigrator:
             key = (species_name, genome_build)
 
             if key not in self.genome_cache and species_name in self.species_cache:
-                genome = Genome(
-                    species_id=self.species_cache[species_name],
-                    genome_build=genome_build
+                # Check if genome already exists
+                result = await session.execute(
+                    select(Genome).where(
+                        Genome.species_id == self.species_cache[species_name],
+                        Genome.genome_build == genome_build
+                    )
                 )
-                session.add(genome)
-                await session.flush()
-                self.genome_cache[key] = genome.id
-                count += 1
+                existing = result.scalar_one_or_none()
+
+                if existing:
+                    self.genome_cache[key] = existing.id
+                else:
+                    genome = Genome(
+                        species_id=self.species_cache[species_name],
+                        genome_build=genome_build
+                    )
+                    session.add(genome)
+                    await session.flush()
+                    self.genome_cache[key] = genome.id
+                    count += 1
 
         await session.commit()
         print(f"    Created {count} genomes (total: {len(self.genome_cache)})")
@@ -217,11 +254,20 @@ class DataMigrator:
         for row in cursor:
             provider_name = row[0]
             if provider_name not in self.provider_cache:
-                provider = DataProvider(name=provider_name)
-                session.add(provider)
-                await session.flush()
-                self.provider_cache[provider_name] = provider.id
-                count += 1
+                # Check if provider already exists
+                result = await session.execute(
+                    select(DataProvider).where(DataProvider.name == provider_name)
+                )
+                existing = result.scalar_one_or_none()
+
+                if existing:
+                    self.provider_cache[provider_name] = existing.id
+                else:
+                    provider = DataProvider(name=provider_name)
+                    session.add(provider)
+                    await session.flush()
+                    self.provider_cache[provider_name] = provider.id
+                    count += 1
 
         await session.commit()
         print(f"    Created {count} data providers (total: {len(self.provider_cache)})")
@@ -243,15 +289,24 @@ class DataMigrator:
             full_name, email = self.parse_maintainer_email(maintainer_str)
 
             if email and email not in self.user_cache:
-                user = User(
-                    email=email,
-                    full_name=full_name,
-                    role="maintainer"
+                # Check if user already exists
+                result = await session.execute(
+                    select(User).where(User.email == email)
                 )
-                session.add(user)
-                await session.flush()
-                self.user_cache[email] = user.id
-                count += 1
+                existing = result.scalar_one_or_none()
+
+                if existing:
+                    self.user_cache[email] = existing.id
+                else:
+                    user = User(
+                        email=email,
+                        full_name=full_name,
+                        role="maintainer"
+                    )
+                    session.add(user)
+                    await session.flush()
+                    self.user_cache[email] = user.id
+                    count += 1
 
         await session.commit()
         print(f"    Created {count} users (total: {len(self.user_cache)})")
@@ -273,15 +328,25 @@ class DataMigrator:
         for row in cursor:
             sqlite_id, recipe_name, package_name = row
             if recipe_name and recipe_name not in self.recipe_cache:
-                recipe = Recipe(
-                    name=recipe_name,
-                    package_name=package_name
+                # Check if recipe already exists
+                result = await session.execute(
+                    select(Recipe).where(Recipe.name == recipe_name)
                 )
-                session.add(recipe)
-                await session.flush()
-                self.recipe_cache[recipe_name] = recipe.id
-                recipe_id_map[sqlite_id] = recipe.id
-                count += 1
+                existing = result.scalar_one_or_none()
+
+                if existing:
+                    self.recipe_cache[recipe_name] = existing.id
+                    recipe_id_map[sqlite_id] = existing.id
+                else:
+                    recipe = Recipe(
+                        name=recipe_name,
+                        package_name=package_name
+                    )
+                    session.add(recipe)
+                    await session.flush()
+                    self.recipe_cache[recipe_name] = recipe.id
+                    recipe_id_map[sqlite_id] = recipe.id
+                    count += 1
 
         # Also get unique preparer classes
         cursor = sqlite_conn.execute("""
@@ -294,14 +359,23 @@ class DataMigrator:
         for row in cursor:
             preparer_class = row[0]
             if preparer_class and preparer_class not in self.recipe_cache:
-                recipe = Recipe(
-                    name=preparer_class,
-                    preparer_class=preparer_class
+                # Check if recipe already exists
+                result = await session.execute(
+                    select(Recipe).where(Recipe.name == preparer_class)
                 )
-                session.add(recipe)
-                await session.flush()
-                self.recipe_cache[preparer_class] = recipe.id
-                count += 1
+                existing = result.scalar_one_or_none()
+
+                if existing:
+                    self.recipe_cache[preparer_class] = existing.id
+                else:
+                    recipe = Recipe(
+                        name=preparer_class,
+                        preparer_class=preparer_class
+                    )
+                    session.add(recipe)
+                    await session.flush()
+                    self.recipe_cache[preparer_class] = recipe.id
+                    count += 1
 
         await session.commit()
         print(f"    Created {count} recipes (total: {len(self.recipe_cache)})")

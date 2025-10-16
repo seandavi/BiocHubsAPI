@@ -137,7 +137,7 @@ class Genome(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     species_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("species.id"), nullable=False)
-    genome_build: Mapped[str] = mapped_column(String(100), nullable=False)
+    genome_build: Mapped[str] = mapped_column(String(255), nullable=False)
     assembly_accession: Mapped[Optional[str]] = mapped_column(String(50))
     ucsc_name: Mapped[Optional[str]] = mapped_column(String(100))
     ensembl_name: Mapped[Optional[str]] = mapped_column(String(100))
