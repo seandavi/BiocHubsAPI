@@ -396,27 +396,42 @@ class DataMigrator:
 
         for row in cursor:
             sqlite_id, location_prefix = row
-            if location_prefix and location_prefix not in self.storage_cache:
-                # Determine storage type from URL
-                if location_prefix.startswith('http://') or location_prefix.startswith('https://'):
-                    storage_type = 'http'
-                elif location_prefix.startswith('ftp://'):
-                    storage_type = 'ftp'
-                elif location_prefix.startswith('s3://'):
-                    storage_type = 's3'
-                else:
-                    storage_type = 'local'
+            storage_name = f"Storage {sqlite_id}"
 
-                storage = StorageLocation(
-                    name=f"Storage {sqlite_id}",
-                    location_type=storage_type,
-                    base_url=location_prefix
+            if location_prefix and storage_name not in self.storage_cache:
+                # Check if storage location already exists
+                result = await session.execute(
+                    select(StorageLocation).where(StorageLocation.name == storage_name)
                 )
-                session.add(storage)
-                await session.flush()
-                self.storage_cache[storage.name] = storage.id
-                location_id_map[sqlite_id] = storage.id
-                count += 1
+                existing = result.scalar_one_or_none()
+
+                if existing:
+                    self.storage_cache[storage_name] = existing.id
+                    location_id_map[sqlite_id] = existing.id
+                else:
+                    # Determine storage type from URL
+                    if location_prefix.startswith('http://') or location_prefix.startswith('https://'):
+                        storage_type = 'http'
+                    elif location_prefix.startswith('ftp://'):
+                        storage_type = 'ftp'
+                    elif location_prefix.startswith('s3://'):
+                        storage_type = 's3'
+                    else:
+                        storage_type = 'local'
+
+                    storage = StorageLocation(
+                        name=storage_name,
+                        location_type=storage_type,
+                        base_url=location_prefix
+                    )
+                    session.add(storage)
+                    await session.flush()
+                    self.storage_cache[storage_name] = storage.id
+                    location_id_map[sqlite_id] = storage.id
+                    count += 1
+            elif storage_name in self.storage_cache:
+                # Already in cache, just add to map
+                location_id_map[sqlite_id] = self.storage_cache[storage_name]
 
         await session.commit()
         print(f"    Created {count} storage locations (total: {len(self.storage_cache)})")
