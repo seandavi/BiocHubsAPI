@@ -16,23 +16,21 @@ from .models import (
 )
 
 
-def create_schema(database_url: str, drop_existing: bool = False) -> None:
+def create_schema(database_url: str, drop_existing: bool = False, echo: bool = False) -> None:
     """
     Create all database tables from SQLAlchemy models.
 
     Args:
         database_url: PostgreSQL connection string
         drop_existing: If True, drop all existing tables first
+        echo: If True, log all SQL statements
     """
-    engine = create_engine(database_url, echo=True)
+    engine = create_engine(database_url, echo=echo)
 
     if drop_existing:
-        print("Dropping existing tables...")
         Base.metadata.drop_all(engine)
 
-    print("Creating database schema...")
     Base.metadata.create_all(engine)
-    print("Schema created successfully!")
 
 
 def seed_initial_data(database_url: str) -> None:
@@ -45,11 +43,8 @@ def seed_initial_data(database_url: str) -> None:
     engine = create_engine(database_url)
 
     with Session(engine) as session:
-        print("Seeding initial data...")
-
         # 1. Create Hubs
         if not session.query(Hub).first():
-            print("  - Creating hubs...")
             hubs = [
                 Hub(id=1, name="AnnotationHub", code="AH", description="Annotation resources for genomic data"),
                 Hub(id=2, name="ExperimentHub", code="EH", description="Experimental data and workflows"),
@@ -59,7 +54,6 @@ def seed_initial_data(database_url: str) -> None:
 
         # 2. Create Resource Statuses
         if not session.query(ResourceStatus).first():
-            print("  - Creating resource statuses...")
             statuses = [
                 ResourceStatus(id=1, status="Public", is_public=True, sort_order=1),
                 ResourceStatus(id=2, status="Unreviewed", is_public=False, sort_order=2),
@@ -77,7 +71,6 @@ def seed_initial_data(database_url: str) -> None:
 
         # 3. Create some example Bioconductor releases
         if not session.query(BiocRelease).first():
-            print("  - Creating Bioconductor releases...")
             releases = [
                 BiocRelease(version="3.18", release_date=date(2023, 10, 25), is_current=False, r_version_min="4.3"),
                 BiocRelease(version="3.19", release_date=date(2024, 5, 1), is_current=False, r_version_min="4.4"),
@@ -88,7 +81,6 @@ def seed_initial_data(database_url: str) -> None:
 
         # 4. Create a system organization
         if not session.query(Organization).filter_by(short_name="bioconductor").first():
-            print("  - Creating Bioconductor organization...")
             bioc_org = Organization(
                 name="Bioconductor",
                 short_name="bioconductor",
@@ -99,7 +91,6 @@ def seed_initial_data(database_url: str) -> None:
 
         # 5. Create a system user for migrations
         if not session.query(User).filter_by(email="system@bioconductor.org").first():
-            print("  - Creating system user...")
             bioc_org = session.query(Organization).filter_by(short_name="bioconductor").first()
             system_user = User(
                 email="system@bioconductor.org",
@@ -109,8 +100,6 @@ def seed_initial_data(database_url: str) -> None:
             )
             session.add(system_user)
             session.commit()
-
-        print("Initial data seeded successfully!")
 
 
 def get_database_stats(database_url: str) -> dict:
@@ -165,7 +154,7 @@ def verify_schema(database_url: str) -> bool:
         database_url: PostgreSQL connection string
 
     Returns:
-        True if schema is valid
+        True if schema is valid, False otherwise
     """
     engine = create_engine(database_url)
 
@@ -178,11 +167,9 @@ def verify_schema(database_url: str) -> bool:
             session.query(User).first()
             session.query(Organization).first()
 
-        print("✓ Schema verification passed!")
         return True
 
-    except Exception as e:
-        print(f"✗ Schema verification failed: {e}")
+    except Exception:
         return False
 
 
