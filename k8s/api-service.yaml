@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: biochubs-api-service
+  namespace: biochubs
+  labels:
+    app: biochubs-api
+spec:
+  type: LoadBalancer  # Use LoadBalancer for Docker Desktop K8s
+  # type: ClusterIP   # Use ClusterIP if using Ingress
+  selector:
+    app: biochubs-api
+  ports:
+  - port: 80
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  sessionAffinity: None

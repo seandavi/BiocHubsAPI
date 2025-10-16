@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: biochubs
+  labels:
+    name: biochubs
+    app: biochubs-api

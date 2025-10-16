@@ -1,0 +1,35 @@
+# Optional: Use Ingress for advanced routing and TLS termination
+# Requires an Ingress Controller (e.g., nginx-ingress, traefik)
+# Comment out if using LoadBalancer service type
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: biochubs-api-ingress
+  namespace: biochubs
+  labels:
+    app: biochubs-api
+  annotations:
+    # nginx ingress annotations
+    # nginx.ingress.kubernetes.io/rewrite-target: /
+    # nginx.ingress.kubernetes.io/ssl-redirect: "true"
+
+    # cert-manager for automatic TLS (if installed)
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx  # or "traefik" for k3s default
+  rules:
+  - host: biochubs-api.local  # Change to your domain
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: biochubs-api-service
+            port:
+              number: 80
+  # Uncomment for TLS
+  # tls:
+  # - hosts:
+  #   - biochubs-api.local
+  #   secretName: biochubs-api-tls

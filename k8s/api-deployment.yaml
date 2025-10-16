@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: biochubs-api
+  namespace: biochubs
+  labels:
+    app: biochubs-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: biochubs-api
+  template:
+    metadata:
+      labels:
+        app: biochubs-api
+    spec:
+      containers:
+      - name: api
+        image: biochubs-api:latest
+        imagePullPolicy: IfNotPresent  # Use Never for local-only images
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: POSTGRES_URI
+          valueFrom:
+            secretKeyRef:
+              name: biochubs-api-secret
+              key: POSTGRES_URI
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+      # Ensure API starts only after postgres is ready
+      initContainers:
+      - name: wait-for-postgres
+        image: postgres:16-alpine
+        command:
+        - sh
+        - -c
+        - |
+          until pg_isready -h postgres-service -U postgres; do
+            echo "Waiting for postgres..."
+            sleep 2
+          done
+        env:
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: biochubs-api-secret
+              key: DB_PASSWORD
