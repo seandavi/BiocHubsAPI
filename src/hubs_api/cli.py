@@ -27,10 +27,12 @@ def mirror_command():
 @click.option("--port", default=8000, type=int, help="Port to bind to")
 @click.option("--reload", is_flag=True, help="Enable auto-reload for development")
 def serve(host: str, port: int, reload: bool):
-    """Start the FastAPI REST API server."""
+    """Start the FastAPI REST API server (v2 with normalized schema)."""
     import uvicorn
+    click.echo(f"Starting API server on {host}:{port}")
+    click.echo(f"API documentation: http://{host}:{port}/docs")
     uvicorn.run(
-        "hubs_api.api:app",
+        "hubs_api.api_v2:app",
         host=host,
         port=port,
         reload=reload,
