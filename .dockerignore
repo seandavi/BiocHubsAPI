@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD
+.github/
+
+# Documentation
+*.md
+!README.md
+docs/
+
+# SQLite databases (don't include in image)
+*.sqlite3
+*.db
+
+# Logs
+*.log
+/tmp/
+
+# macOS
+.DS_Store
+
+# Environment files (secrets should be mounted)
+.env
+.env.*
+
+# Test files
+tests/
+test_*.py
+*_test.py
+
+# Development files
+Makefile
+docker-compose.yml
