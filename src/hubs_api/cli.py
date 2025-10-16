@@ -1,4 +1,5 @@
 import os
+import asyncio
 import click
 from . import mirror
 
@@ -73,7 +74,7 @@ def create_schema(database_url: str, drop_existing: bool):
         click.echo(click.style("⚠️  WARNING: Dropping all existing tables!", fg="yellow", bold=True))
 
     try:
-        db_utils.create_schema(database_url, drop_existing=drop_existing)
+        asyncio.run(db_utils.create_schema(database_url, drop_existing=drop_existing))
         click.echo(click.style("✓ Schema created successfully!", fg="green"))
     except Exception as e:
         click.echo(click.style(f"✗ Error creating schema: {e}", fg="red"), err=True)
@@ -94,7 +95,7 @@ def seed_data(database_url: str):
     click.echo(f"Seeding initial data in database: {database_url}")
 
     try:
-        db_utils.seed_initial_data(database_url)
+        asyncio.run(db_utils.seed_initial_data(database_url))
         click.echo(click.style("✓ Initial data seeded successfully!", fg="green"))
     except Exception as e:
         click.echo(click.style(f"✗ Error seeding data: {e}", fg="red"), err=True)
@@ -115,7 +116,7 @@ def show_stats(database_url: str):
     click.echo(f"Fetching statistics from database: {database_url}\n")
 
     try:
-        stats = db_utils.get_database_stats(database_url)
+        stats = asyncio.run(db_utils.get_database_stats(database_url))
 
         # Calculate column width for alignment
         max_table_len = max(len(table) for table in stats.keys())
@@ -168,7 +169,7 @@ def verify_schema(database_url: str):
     click.echo(f"Verifying schema in database: {database_url}\n")
 
     try:
-        is_valid = db_utils.verify_schema(database_url)
+        is_valid = asyncio.run(db_utils.verify_schema(database_url))
 
         if is_valid:
             click.echo(click.style("✓ Schema verification passed!", fg="green", bold=True))
@@ -208,17 +209,17 @@ def init_database(database_url: str, drop_existing: bool):
     try:
         # Step 1: Create schema
         click.echo("\n[1/3] Creating schema...")
-        db_utils.create_schema(database_url, drop_existing=drop_existing)
+        asyncio.run(db_utils.create_schema(database_url, drop_existing=drop_existing))
         click.echo(click.style("  ✓ Schema created", fg="green"))
 
         # Step 2: Seed data
         click.echo("\n[2/3] Seeding initial data...")
-        db_utils.seed_initial_data(database_url)
+        asyncio.run(db_utils.seed_initial_data(database_url))
         click.echo(click.style("  ✓ Data seeded", fg="green"))
 
         # Step 3: Verify
         click.echo("\n[3/3] Verifying schema...")
-        is_valid = db_utils.verify_schema(database_url)
+        is_valid = asyncio.run(db_utils.verify_schema(database_url))
         if is_valid:
             click.echo(click.style("  ✓ Verification passed", fg="green"))
         else:
@@ -230,7 +231,7 @@ def init_database(database_url: str, drop_existing: bool):
         click.echo(click.style("Database initialized successfully! 🎉", fg="green", bold=True))
         click.echo("=" * 60 + "\n")
 
-        stats = db_utils.get_database_stats(database_url)
+        stats = asyncio.run(db_utils.get_database_stats(database_url))
         click.echo("Initial record counts:")
         for table, count in sorted(stats.items()):
             if count > 0:

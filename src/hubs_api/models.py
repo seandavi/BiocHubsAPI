@@ -46,7 +46,7 @@ class Organization(Base):
     ror_id: Mapped[Optional[str]] = mapped_column(String(50), unique=True)  # Research Organization Registry
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    metadata: Mapped[Optional[dict]] = mapped_column(JSONB)
+    meta: Mapped[Optional[dict]] = mapped_column(JSONB)
 
     # Relationships
     users: Mapped[List["User"]] = relationship(back_populates="organization")
@@ -71,7 +71,7 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     last_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    metadata: Mapped[Optional[dict]] = mapped_column(JSONB)
+    meta: Mapped[Optional[dict]] = mapped_column(JSONB)
 
     # Relationships
     organization: Mapped[Optional["Organization"]] = relationship(back_populates="users")
@@ -116,7 +116,7 @@ class Species(Base):
     taxonomy_id: Mapped[int] = mapped_column(Integer, unique=True, nullable=False)
     lineage: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    metadata: Mapped[Optional[dict]] = mapped_column(JSONB)
+    meta: Mapped[Optional[dict]] = mapped_column(JSONB)
 
     # Relationships
     genomes: Mapped[List["Genome"]] = relationship(back_populates="species")
@@ -144,7 +144,7 @@ class Genome(Base):
     is_reference: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     release_date: Mapped[Optional[date]] = mapped_column(Date)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    metadata: Mapped[Optional[dict]] = mapped_column(JSONB)
+    meta: Mapped[Optional[dict]] = mapped_column(JSONB)
 
     # Relationships
     species: Mapped["Species"] = relationship(back_populates="genomes")
@@ -176,7 +176,7 @@ class DataProvider(Base):
     contact_email: Mapped[Optional[str]] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    metadata: Mapped[Optional[dict]] = mapped_column(JSONB)
+    meta: Mapped[Optional[dict]] = mapped_column(JSONB)
 
     # Relationships
     organization: Mapped[Optional["Organization"]] = relationship(back_populates="data_providers")
@@ -203,7 +203,7 @@ class Recipe(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    metadata: Mapped[Optional[dict]] = mapped_column(JSONB)
+    meta: Mapped[Optional[dict]] = mapped_column(JSONB)
 
     # Relationships
     resources: Mapped[List["Resource"]] = relationship(back_populates="recipe")
@@ -299,7 +299,7 @@ class Resource(Base):
     deleted_by: Mapped[Optional[int]] = mapped_column(BigInteger, ForeignKey("users.id"))
 
     # Extensibility
-    metadata: Mapped[Optional[dict]] = mapped_column(JSONB)
+    meta: Mapped[Optional[dict]] = mapped_column(JSONB)
 
     # Relationships
     hub: Mapped["Hub"] = relationship(back_populates="resources")
@@ -367,7 +367,7 @@ class StorageLocation(Base):
     description: Mapped[Optional[str]] = mapped_column(Text)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    metadata: Mapped[Optional[dict]] = mapped_column(JSONB)
+    meta: Mapped[Optional[dict]] = mapped_column(JSONB)
 
     # Relationships
     resource_files: Mapped[List["ResourceFile"]] = relationship(back_populates="storage_location")
@@ -581,7 +581,7 @@ class AuditLog(Base):
 
     # Context
     request_id: Mapped[Optional[str]] = mapped_column(UUID)
-    metadata: Mapped[Optional[dict]] = mapped_column(JSONB)
+    meta: Mapped[Optional[dict]] = mapped_column(JSONB)
 
     # Relationships
     user: Mapped[Optional["User"]] = relationship()

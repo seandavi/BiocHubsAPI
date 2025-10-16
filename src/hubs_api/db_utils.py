@@ -1,11 +1,13 @@
 """
 Database utilities for schema creation, seeding, and migrations.
+
+Uses async/await with asyncpg for PostgreSQL operations.
 """
 
 from datetime import date
 from typing import Optional
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import Session
+from sqlalchemy import text, select
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from .models import (
     Base,
     Hub,
@@ -16,44 +18,61 @@ from .models import (
 )
 
 
-def create_schema(database_url: str, drop_existing: bool = False, echo: bool = False) -> None:
+def _convert_to_async_url(database_url: str) -> str:
+    """Convert postgresql:// URL to postgresql+asyncpg:// for async operations."""
+    if database_url.startswith("postgresql://"):
+        return database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    elif database_url.startswith("postgresql+asyncpg://"):
+        return database_url
+    else:
+        raise ValueError(f"Unsupported database URL scheme: {database_url}")
+
+
+async def create_schema(database_url: str, drop_existing: bool = False, echo: bool = False) -> None:
     """
     Create all database tables from SQLAlchemy models.
 
     Args:
-        database_url: PostgreSQL connection string
+        database_url: PostgreSQL connection string (will be converted to asyncpg)
         drop_existing: If True, drop all existing tables first
         echo: If True, log all SQL statements
     """
-    engine = create_engine(database_url, echo=echo)
+    async_url = _convert_to_async_url(database_url)
+    engine = create_async_engine(async_url, echo=echo)
 
-    if drop_existing:
-        Base.metadata.drop_all(engine)
+    async with engine.begin() as conn:
+        if drop_existing:
+            await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
 
-    Base.metadata.create_all(engine)
+    await engine.dispose()
 
 
-def seed_initial_data(database_url: str) -> None:
+async def seed_initial_data(database_url: str) -> None:
     """
     Seed the database with initial reference data.
 
     Args:
-        database_url: PostgreSQL connection string
+        database_url: PostgreSQL connection string (will be converted to asyncpg)
     """
-    engine = create_engine(database_url)
+    async_url = _convert_to_async_url(database_url)
+    engine = create_async_engine(async_url)
+    async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
-    with Session(engine) as session:
+    async with async_session() as session:
         # 1. Create Hubs
-        if not session.query(Hub).first():
+        result = await session.execute(select(Hub))
+        if not result.first():
             hubs = [
                 Hub(id=1, name="AnnotationHub", code="AH", description="Annotation resources for genomic data"),
                 Hub(id=2, name="ExperimentHub", code="EH", description="Experimental data and workflows"),
             ]
             session.add_all(hubs)
-            session.commit()
+            await session.commit()
 
         # 2. Create Resource Statuses
-        if not session.query(ResourceStatus).first():
+        result = await session.execute(select(ResourceStatus))
+        if not result.first():
             statuses = [
                 ResourceStatus(id=1, status="Public", is_public=True, sort_order=1),
                 ResourceStatus(id=2, status="Unreviewed", is_public=False, sort_order=2),
@@ -67,31 +86,36 @@ def seed_initial_data(database_url: str) -> None:
                 ResourceStatus(id=99, status="Defunct", is_public=False, sort_order=99),
             ]
             session.add_all(statuses)
-            session.commit()
+            await session.commit()
 
         # 3. Create some example Bioconductor releases
-        if not session.query(BiocRelease).first():
+        result = await session.execute(select(BiocRelease))
+        if not result.first():
             releases = [
                 BiocRelease(version="3.18", release_date=date(2023, 10, 25), is_current=False, r_version_min="4.3"),
                 BiocRelease(version="3.19", release_date=date(2024, 5, 1), is_current=False, r_version_min="4.4"),
                 BiocRelease(version="3.20", release_date=date(2024, 10, 30), is_current=True, r_version_min="4.4"),
             ]
             session.add_all(releases)
-            session.commit()
+            await session.commit()
 
         # 4. Create a system organization
-        if not session.query(Organization).filter_by(short_name="bioconductor").first():
+        result = await session.execute(select(Organization).filter_by(short_name="bioconductor"))
+        if not result.scalar_one_or_none():
             bioc_org = Organization(
                 name="Bioconductor",
                 short_name="bioconductor",
                 website="https://bioconductor.org",
             )
             session.add(bioc_org)
-            session.commit()
+            await session.commit()
 
         # 5. Create a system user for migrations
-        if not session.query(User).filter_by(email="system@bioconductor.org").first():
-            bioc_org = session.query(Organization).filter_by(short_name="bioconductor").first()
+        result = await session.execute(select(User).filter_by(email="system@bioconductor.org"))
+        if not result.scalar_one_or_none():
+            bioc_org_result = await session.execute(select(Organization).filter_by(short_name="bioconductor"))
+            bioc_org = bioc_org_result.scalar_one_or_none()
+
             system_user = User(
                 email="system@bioconductor.org",
                 full_name="Bioconductor System",
@@ -99,22 +123,26 @@ def seed_initial_data(database_url: str) -> None:
                 organization_id=bioc_org.id if bioc_org else None,
             )
             session.add(system_user)
-            session.commit()
+            await session.commit()
+
+    await engine.dispose()
 
 
-def get_database_stats(database_url: str) -> dict:
+async def get_database_stats(database_url: str) -> dict:
     """
     Get statistics about the database contents.
 
     Args:
-        database_url: PostgreSQL connection string
+        database_url: PostgreSQL connection string (will be converted to asyncpg)
 
     Returns:
         Dictionary with table counts
     """
-    engine = create_engine(database_url)
+    async_url = _convert_to_async_url(database_url)
+    engine = create_async_engine(async_url)
+    async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
-    with Session(engine) as session:
+    async with async_session() as session:
         stats = {}
 
         # Query counts for each table
@@ -139,62 +167,72 @@ def get_database_stats(database_url: str) -> dict:
         ]
 
         for table in tables:
-            result = session.execute(text(f"SELECT COUNT(*) FROM {table}"))
+            result = await session.execute(text(f"SELECT COUNT(*) FROM {table}"))
             count = result.scalar()
             stats[table] = count
 
-        return stats
+    await engine.dispose()
+    return stats
 
 
-def verify_schema(database_url: str) -> bool:
+async def verify_schema(database_url: str) -> bool:
     """
     Verify that the database schema matches the models.
 
     Args:
-        database_url: PostgreSQL connection string
+        database_url: PostgreSQL connection string (will be converted to asyncpg)
 
     Returns:
         True if schema is valid, False otherwise
     """
-    engine = create_engine(database_url)
+    async_url = _convert_to_async_url(database_url)
+    engine = create_async_engine(async_url)
+    async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
     try:
-        with Session(engine) as session:
+        async with async_session() as session:
             # Try a simple query on each core table
-            session.query(Hub).first()
-            session.query(ResourceStatus).first()
-            session.query(BiocRelease).first()
-            session.query(User).first()
-            session.query(Organization).first()
+            await session.execute(select(Hub).limit(1))
+            await session.execute(select(ResourceStatus).limit(1))
+            await session.execute(select(BiocRelease).limit(1))
+            await session.execute(select(User).limit(1))
+            await session.execute(select(Organization).limit(1))
 
+        await engine.dispose()
         return True
 
     except Exception:
+        await engine.dispose()
         return False
 
 
 if __name__ == "__main__":
     import os
+    import asyncio
 
-    # Example usage
-    DATABASE_URL = os.getenv(
-        "DATABASE_URL",
-        "postgresql://localhost/biochubs_dev"
-    )
+    async def main():
+        # Example usage
+        DATABASE_URL = os.getenv(
+            "POSTGRES_URI",
+            "postgresql://localhost/biochubs_dev"
+        )
 
-    print(f"Using database: {DATABASE_URL}\n")
+        print(f"Using database: {DATABASE_URL}\n")
 
-    # Create schema
-    create_schema(DATABASE_URL, drop_existing=True)
+        # Create schema
+        await create_schema(DATABASE_URL, drop_existing=True)
 
-    # Seed initial data
-    seed_initial_data(DATABASE_URL)
+        # Seed initial data
+        await seed_initial_data(DATABASE_URL)
 
-    # Verify
-    verify_schema(DATABASE_URL)
+        # Verify
+        is_valid = await verify_schema(DATABASE_URL)
+        print(f"\nSchema valid: {is_valid}")
 
-    # Show stats
-    stats = get_database_stats(DATABASE_URL)
-    print("\nDatabase Statistics:")
-    for table, count in stats.items():
-        print(f"  {table}: {count} records")
+        # Show stats
+        stats = await get_database_stats(DATABASE_URL)
+        print("\nDatabase Statistics:")
+        for table, count in stats.items():
+            print(f"  {table}: {count} records")
+
+    asyncio.run(main())
