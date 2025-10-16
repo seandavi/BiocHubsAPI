@@ -549,8 +549,9 @@ class DataMigrator:
 
         # Now create resource-tag relationships
         # Need to map old resource IDs to new ones
+        # Use DISTINCT to avoid duplicate (resource, tag) pairs
         cursor = conn.execute("""
-            SELECT r.ah_id, t.tag
+            SELECT DISTINCT r.ah_id, t.tag
             FROM tags t
             JOIN resources r ON t.resource_id = r.id
             WHERE t.tag IS NOT NULL
