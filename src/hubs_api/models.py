@@ -42,7 +42,7 @@ class Organization(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     name: Mapped[str] = mapped_column(String(500), nullable=False)
     short_name: Mapped[Optional[str]] = mapped_column(String(100), unique=True)
-    website: Mapped[Optional[str]] = mapped_column(String(500))
+    website: Mapped[Optional[str]] = mapped_column(Text)
     ror_id: Mapped[Optional[str]] = mapped_column(String(50), unique=True)  # Research Organization Registry
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
@@ -63,7 +63,7 @@ class User(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     username: Mapped[Optional[str]] = mapped_column(String(255), unique=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
-    full_name: Mapped[Optional[str]] = mapped_column(String(500))
+    full_name: Mapped[Optional[str]] = mapped_column(Text)
     orcid: Mapped[Optional[str]] = mapped_column(String(19), unique=True)
     organization_id: Mapped[Optional[int]] = mapped_column(BigInteger, ForeignKey("organizations.id"))
     role: Mapped[str] = mapped_column(String(50), nullable=False, server_default="user")
@@ -111,8 +111,8 @@ class Species(Base):
     __tablename__ = "species"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    scientific_name: Mapped[str] = mapped_column(String(500), nullable=False, unique=True)
-    common_name: Mapped[Optional[str]] = mapped_column(String(500))
+    scientific_name: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    common_name: Mapped[Optional[str]] = mapped_column(Text)
     taxonomy_id: Mapped[int] = mapped_column(Integer, unique=True, nullable=False)
     lineage: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -137,7 +137,7 @@ class Genome(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     species_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("species.id"), nullable=False)
-    genome_build: Mapped[str] = mapped_column(String(255), nullable=False)
+    genome_build: Mapped[str] = mapped_column(Text, nullable=False)
     assembly_accession: Mapped[Optional[str]] = mapped_column(String(50))
     ucsc_name: Mapped[Optional[str]] = mapped_column(String(100))
     ensembl_name: Mapped[Optional[str]] = mapped_column(String(100))
@@ -169,9 +169,9 @@ class DataProvider(Base):
     __tablename__ = "data_providers"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    name: Mapped[str] = mapped_column(String(500), nullable=False, unique=True)
+    name: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     organization_id: Mapped[Optional[int]] = mapped_column(BigInteger, ForeignKey("organizations.id"))
-    url: Mapped[Optional[str]] = mapped_column(String(1000))
+    url: Mapped[Optional[str]] = mapped_column(Text)
     description: Mapped[Optional[str]] = mapped_column(Text)
     contact_email: Mapped[Optional[str]] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -195,8 +195,8 @@ class Recipe(Base):
     __tablename__ = "recipes"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
-    package_name: Mapped[Optional[str]] = mapped_column(String(255))
+    name: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    package_name: Mapped[Optional[str]] = mapped_column(Text)
     description: Mapped[Optional[str]] = mapped_column(Text)
     preparer_class: Mapped[Optional[str]] = mapped_column(String(255))
     version: Mapped[Optional[str]] = mapped_column(String(50))
@@ -363,7 +363,7 @@ class StorageLocation(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     location_type: Mapped[str] = mapped_column(String(50), nullable=False)
-    base_url: Mapped[str] = mapped_column(String(1000), nullable=False)
+    base_url: Mapped[str] = mapped_column(Text, nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
