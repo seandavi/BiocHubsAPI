@@ -15,9 +15,8 @@ import sys
 from loguru import logger
 
 from .models import (
-    Resource, Species, Genome, DataProvider, Recipe, User,
-    Hub, ResourceStatus, Tag, ResourceTag, BiocRelease,
-    ResourceBiocVersion, ResourceFile, SourceFile
+    Resource, Species, Genome, DataProvider, Hub, Tag, ResourceTag, BiocRelease,
+    ResourceBiocVersion
 )
 from .schemas import (
     ResourceListResponse, ResourceDetailResponse, ResourceSchema,

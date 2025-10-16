@@ -8,22 +8,18 @@ the normalized PostgreSQL schema.
 import re
 import asyncio
 from typing import Dict, Optional, Tuple
-from pathlib import Path
 import sqlite3
 from datetime import datetime
 
-from sqlalchemy import select, text
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 
 from .models import (
-    Base,
-    Hub,
     Species,
     Genome,
     DataProvider,
     Recipe,
     User,
-    Organization,
     ResourceStatus,
     StorageLocation,
     Resource,
@@ -521,7 +517,7 @@ class DataMigrator:
 
     async def migrate_tags(self, session: AsyncSession, sqlite_path: str, hub_id: int):
         """Migrate tags for resources."""
-        print(f"  Migrating tags...")
+        print("  Migrating tags...")
 
         conn = sqlite3.connect(sqlite_path)
         conn.row_factory = sqlite3.Row
@@ -600,7 +596,7 @@ class DataMigrator:
 
     async def migrate_resource_files(self, session: AsyncSession, sqlite_path: str, hub_id: int, storage_id_map: Dict[int, int]):
         """Migrate resource files (rdatapaths)."""
-        print(f"  Migrating resource files...")
+        print("  Migrating resource files...")
 
         conn = sqlite3.connect(sqlite_path)
         conn.row_factory = sqlite3.Row
@@ -654,7 +650,7 @@ class DataMigrator:
 
     async def migrate_source_files(self, session: AsyncSession, sqlite_path: str, hub_id: int):
         """Migrate source files (input_sources)."""
-        print(f"  Migrating source files...")
+        print("  Migrating source files...")
 
         conn = sqlite3.connect(sqlite_path)
         conn.row_factory = sqlite3.Row
@@ -717,7 +713,7 @@ class DataMigrator:
 
     async def migrate_bioc_versions(self, session: AsyncSession, sqlite_path: str, hub_id: int):
         """Migrate Bioconductor version associations."""
-        print(f"  Migrating Bioc version associations...")
+        print("  Migrating Bioc version associations...")
 
         conn = sqlite3.connect(sqlite_path)
         conn.row_factory = sqlite3.Row
@@ -832,12 +828,12 @@ class DataMigrator:
         await engine.dispose()
 
         print(f"\n{'='*60}")
-        print(f"Migration completed successfully!")
+        print("Migration completed successfully!")
         print(f"{'='*60}")
         print(f"Total resources migrated: {ah_count + eh_count}")
         print(f"  AnnotationHub: {ah_count}")
         print(f"  ExperimentHub: {eh_count}")
-        print(f"\nEntity counts:")
+        print("\nEntity counts:")
         print(f"  Species: {len(self.species_cache)}")
         print(f"  Genomes: {len(self.genome_cache)}")
         print(f"  Data Providers: {len(self.provider_cache)}")

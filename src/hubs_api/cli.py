@@ -1,4 +1,3 @@
-import os
 import asyncio
 import click
 from . import mirror
@@ -283,7 +282,7 @@ def migrate_data(database_url: str, sqlite_ah: str, sqlite_eh: str):
         raise click.Abort()
 
     click.echo(click.style("Starting migration...\n", bold=True))
-    click.echo(f"Source databases:")
+    click.echo("Source databases:")
     click.echo(f"  AnnotationHub: {click.style(sqlite_ah, fg='cyan')}")
     click.echo(f"  ExperimentHub:  {click.style(sqlite_eh, fg='cyan')}")
     click.echo(f"Target database: {click.style(database_url, fg='cyan')}\n")

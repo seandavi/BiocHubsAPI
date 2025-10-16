@@ -5,7 +5,6 @@ Uses async/await with asyncpg for PostgreSQL operations.
 """
 
 from datetime import date
-from typing import Optional
 from sqlalchemy import text, select
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from .models import (
