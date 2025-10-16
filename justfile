@@ -1,6 +1,42 @@
 # Bioconductor Hubs API - Task Runner
 # https://github.com/casey/just
 
+#   ✅ Complete Workflows
+#   just setup          # Build → Deploy → Init DB (one command!)
+#   just migrate        # Copy SQLite → Run migration → Show stats
+#   just redeploy       # Rebuild image → Restart pods
+#   just reset          # Clean → Deploy → Init (fresh start)
+
+#   ✅ Smarter Commands
+#   just sql "SELECT COUNT(*) FROM resources"  # Execute SQL directly
+#   just scale 5                               # Scale to 5 replicas
+#   just port-forward 8080                     # Custom port
+#   just copy-sqlite my-ah.db my-eh.db        # Custom file names
+
+#   ✅ Developer-Friendly
+#   just dev            # Local dev server with reload
+#   just fmt            # Format code
+#   just lint           # Run linters
+#   just test           # Run tests
+
+#   ✅ Better Defaults & Safety
+#   - Default values for all parameters
+#   - Confirmation prompts for destructive operations
+#   - Better error messages
+#   - No tab/space confusion
+
+#   Quick Reference
+
+#   # Most common commands
+#   just                 # List all recipes
+#   just setup           # Complete first-time setup
+#   just deploy          # Deploy to K8s
+#   just logs            # Watch logs
+#   just shell-api       # Shell into pod
+#   just stats           # DB statistics
+#   just port-forward    # Access API locally
+
+
 # Configuration
 image_name := "biochubs-api"
 image_tag := "latest"
