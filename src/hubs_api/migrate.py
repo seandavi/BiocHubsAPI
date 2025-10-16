@@ -672,6 +672,11 @@ class DataMigrator:
 
         for row in cursor:
             hub_accession = row['ah_id']
+            source_url = row['sourceurl']
+
+            # Skip if source URL is null or empty (required field)
+            if not source_url or not source_url.strip():
+                continue
 
             # Find the PostgreSQL resource
             result = await session.execute(
@@ -685,7 +690,7 @@ class DataMigrator:
             if resource:
                 source_file = SourceFile(
                     resource_id=resource.id,
-                    source_url=row['sourceurl'],
+                    source_url=source_url,
                     source_type=row['sourcetype'],
                     source_version=row['sourceversion'],
                     md5_hash=row['sourcemd5'],
