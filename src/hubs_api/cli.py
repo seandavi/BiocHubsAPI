@@ -242,4 +242,62 @@ def init_database(database_url: str, drop_existing: bool):
         raise click.Abort()
 
 
+@db_group.command(name="migrate")
+@click.option(
+    "--database-url",
+    envvar="POSTGRES_URI",
+    required=True,
+    help="PostgreSQL connection string (or set POSTGRES_URI env var)"
+)
+@click.option(
+    "--sqlite-ah",
+    default="annotationhub.sqlite3",
+    help="Path to AnnotationHub SQLite database"
+)
+@click.option(
+    "--sqlite-eh",
+    default="experimenthub.sqlite3",
+    help="Path to ExperimentHub SQLite database"
+)
+@click.confirmation_option(
+    prompt="This will migrate all data from SQLite to PostgreSQL. Continue?",
+    help="Skip confirmation prompt"
+)
+def migrate_data(database_url: str, sqlite_ah: str, sqlite_eh: str):
+    """Migrate data from SQLite databases to PostgreSQL."""
+    from pathlib import Path
+    from . import migrate
+
+    # Verify SQLite files exist
+    ah_path = Path(sqlite_ah)
+    eh_path = Path(sqlite_eh)
+
+    if not ah_path.exists():
+        click.echo(click.style(f"✗ AnnotationHub database not found: {sqlite_ah}", fg="red"), err=True)
+        raise click.Abort()
+
+    if not eh_path.exists():
+        click.echo(click.style(f"✗ ExperimentHub database not found: {sqlite_eh}", fg="red"), err=True)
+        raise click.Abort()
+
+    click.echo(click.style("Starting migration...\n", bold=True))
+    click.echo(f"Source databases:")
+    click.echo(f"  AnnotationHub: {click.style(sqlite_ah, fg='cyan')}")
+    click.echo(f"  ExperimentHub:  {click.style(sqlite_eh, fg='cyan')}")
+    click.echo(f"Target database: {click.style(database_url, fg='cyan')}\n")
+
+    try:
+        asyncio.run(migrate.migrate_sqlite_to_postgres(
+            postgres_url=database_url,
+            sqlite_ah_path=sqlite_ah,
+            sqlite_eh_path=sqlite_eh
+        ))
+        click.echo(click.style("\n✓ Migration completed successfully!", fg="green", bold=True))
+    except Exception as e:
+        click.echo(click.style(f"\n✗ Migration failed: {e}", fg="red", bold=True), err=True)
+        import traceback
+        traceback.print_exc()
+        raise click.Abort()
+
+
 __all__ = ["cli"]
