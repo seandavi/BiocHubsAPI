@@ -17,3 +17,6 @@ wheels/
 *.sqlite
 *.db
 *.sqlite3
+
+# claude files
+.claude/
