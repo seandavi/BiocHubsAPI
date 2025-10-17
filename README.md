@@ -11,4 +11,4 @@ Over time, we plan to add more features such as authentication, user accounts, d
 
 ## Try me
 
-You can try out the API (which may be down at times) at <https://ahub-api.cancerdatasci.org/docs> or to list resources at <https://ahub-api.cancerdatasci.org/v2/resources>
+You can try out the API (which may be down at times) at <https://ahub-api.cancerdatasci.org/docs> or to list resources at <https://ahub-api.cancerdatasci.org/api/v2/resources>
