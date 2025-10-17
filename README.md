@@ -9,3 +9,6 @@ The goal is to convert these to a more robust and scalable backend (Postgres) an
 
 Over time, we plan to add more features such as authentication, user accounts, data submission, validation, curation, versioning, and more.
 
+## Try me
+
+You can try out the API (which may be down at times) at <https://ahub-api.cancerdatasci.org/docs> or to list resources at <https://ahub-api.cancerdatasci.org/v2/resources>
