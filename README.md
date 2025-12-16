@@ -15,7 +15,7 @@ You can try out the API (which may be down at times) at <https://ahub-api.cancer
 
 ## Deployment Options
 
-The BiocHubs API can be deployed in multiple ways:
+The BiocHubs API can be deployed in multiple ways. **[See detailed comparison →](DEPLOYMENT_COMPARISON.md)**
 
 ### 1. **Google Cloud Run** (Recommended for production)
 Serverless, automatically scalable deployment on Google Cloud Platform.
