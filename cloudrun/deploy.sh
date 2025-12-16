@@ -81,8 +81,16 @@ ENV_FILE="$PROJECT_ROOT/.env.cloudrun"
 if [ -f "$ENV_FILE" ]; then
     echo -e "${BLUE}Loading configuration from $ENV_FILE${NC}"
     # Export variables from .env.cloudrun, ignoring comments and empty lines
+    # Using a safer approach than process substitution with source
     set -a
-    source <(grep -v '^#' "$ENV_FILE" | grep -v '^$')
+    while IFS='=' read -r key value; do
+        # Skip empty lines and comments
+        [[ -z "$key" || "$key" =~ ^[[:space:]]*# ]] && continue
+        # Remove leading/trailing whitespace and quotes
+        key=$(echo "$key" | xargs)
+        value=$(echo "$value" | xargs | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//")
+        export "$key=$value"
+    done < <(grep -v '^[[:space:]]*#' "$ENV_FILE" | grep -v '^[[:space:]]*$')
     set +a
 else
     echo -e "${YELLOW}Warning: .env.cloudrun not found. Using environment variables and defaults.${NC}"
@@ -112,6 +120,21 @@ fi
 if [ -z "$POSTGRES_URI" ]; then
     echo -e "${RED}Error: POSTGRES_URI is required${NC}"
     echo "Set it in .env.cloudrun or as an environment variable"
+    exit 1
+fi
+
+if [ -z "$GCP_REGION" ]; then
+    echo -e "${RED}Error: GCP_REGION is required${NC}"
+    exit 1
+fi
+
+if [ -z "$SERVICE_NAME" ]; then
+    echo -e "${RED}Error: SERVICE_NAME is required${NC}"
+    exit 1
+fi
+
+if [ -z "$ARTIFACT_REGISTRY_REPO" ]; then
+    echo -e "${RED}Error: ARTIFACT_REGISTRY_REPO is required${NC}"
     exit 1
 fi
 
