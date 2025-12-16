@@ -386,6 +386,8 @@ gcloud run services update-traffic biochubs-api \
 
 ### GitHub Actions Example
 
+**Recommended: Using Workload Identity Federation (more secure)**
+
 ```yaml
 name: Deploy to Cloud Run
 
@@ -393,19 +395,24 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - id: auth
-        uses: google-github-actions/auth@v1
+        uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          workload_identity_provider: 'projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL/providers/PROVIDER'
+          service_account: 'SERVICE_ACCOUNT@PROJECT.iam.gserviceaccount.com'
       
       - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v1
+        uses: google-github-actions/setup-gcloud@v2
       
       - name: Build and Push
         run: |
@@ -420,6 +427,19 @@ jobs:
             --region=us-central1 \
             --platform=managed
 ```
+
+**Alternative: Using Service Account Key (less secure)**
+
+If you cannot use Workload Identity Federation:
+
+```yaml
+- id: auth
+  uses: google-github-actions/auth@v2
+  with:
+    credentials_json: ${{ secrets.GCP_SA_KEY }}
+```
+
+See [Workload Identity Federation setup](https://github.com/google-github-actions/auth#setup) for configuration details.
 
 ## Additional Resources
 

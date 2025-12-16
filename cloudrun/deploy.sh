@@ -203,38 +203,48 @@ else
 fi
 
 # Prepare gcloud run deploy command
-DEPLOY_CMD="gcloud run deploy $SERVICE_NAME \
-    --image=$IMAGE_URL \
-    --platform=managed \
-    --region=$GCP_REGION \
-    --port=8000 \
-    --memory=$MEMORY \
-    --cpu=$CPU \
-    --min-instances=$MIN_INSTANCES \
-    --max-instances=$MAX_INSTANCES \
-    --timeout=$TIMEOUT \
-    --set-env-vars=POSTGRES_URI=\"$POSTGRES_URI\""
+# Note: For production, consider using Secret Manager instead of environment variables
+# See: https://cloud.google.com/run/docs/configuring/secrets
+echo ""
+echo -e "${YELLOW}⚠️  Warning: POSTGRES_URI contains sensitive credentials.${NC}"
+echo -e "${YELLOW}   For production, use Secret Manager: https://cloud.google.com/run/docs/configuring/secrets${NC}"
+echo ""
+
+# Build command arguments as array for safety
+DEPLOY_ARGS=(
+    "run" "deploy" "$SERVICE_NAME"
+    "--image=$IMAGE_URL"
+    "--platform=managed"
+    "--region=$GCP_REGION"
+    "--port=8000"
+    "--memory=$MEMORY"
+    "--cpu=$CPU"
+    "--min-instances=$MIN_INSTANCES"
+    "--max-instances=$MAX_INSTANCES"
+    "--timeout=$TIMEOUT"
+    "--set-env-vars=POSTGRES_URI=$POSTGRES_URI"
+)
 
 # Add Cloud SQL instance if specified
 if [ -n "$CLOUD_SQL_INSTANCE" ]; then
-    DEPLOY_CMD="$DEPLOY_CMD --add-cloudsql-instances=$CLOUD_SQL_INSTANCE"
+    DEPLOY_ARGS+=("--add-cloudsql-instances=$CLOUD_SQL_INSTANCE")
     echo "  Cloud SQL:         $CLOUD_SQL_INSTANCE"
 fi
 
 # Add authentication setting
 if [ "$ALLOW_UNAUTHENTICATED" = "true" ]; then
-    DEPLOY_CMD="$DEPLOY_CMD --allow-unauthenticated"
+    DEPLOY_ARGS+=("--allow-unauthenticated")
     echo "  Authentication:    Public (unauthenticated)"
 else
-    DEPLOY_CMD="$DEPLOY_CMD --no-allow-unauthenticated"
+    DEPLOY_ARGS+=("--no-allow-unauthenticated")
     echo "  Authentication:    Required"
 fi
 
 echo ""
 echo -e "${BLUE}Deploying to Cloud Run...${NC}"
 
-# Execute deployment
-eval "$DEPLOY_CMD"
+# Execute deployment using array to avoid eval security issues
+gcloud "${DEPLOY_ARGS[@]}"
 
 # Get service URL
 SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" \
