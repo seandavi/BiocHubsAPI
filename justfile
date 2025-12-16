@@ -106,7 +106,7 @@ deploy-ingress:
 # Delete all Kubernetes resources
 clean:
     @echo "⚠️  This will delete the entire namespace and all data!"
-    @echo -n "Are you sure? [y/N] " && read ans && [ $${ans:-N} = y ]
+    @echo -n "Are you sure? [y/N] " && read ans && [ "$${ans:-N}" = y ]
     kubectl delete namespace {{namespace}}
 
 # Restart API deployment
@@ -403,7 +403,7 @@ cloudrun-update service="biochubs-api" region="us-central1":
 # Delete Cloud Run service
 cloudrun-delete service="biochubs-api" region="us-central1":
     @echo "⚠️  This will delete the Cloud Run service!"
-    @echo -n "Are you sure? [y/N] " && read ans && [ $${ans:-N} = y ]
+    @echo -n "Are you sure? [y/N] " && read ans && [ "$${ans:-N}" = y ]
     gcloud run services delete {{service}} --region={{region}}
 
 # List Cloud Run services

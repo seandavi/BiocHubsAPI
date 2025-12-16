@@ -81,13 +81,17 @@ ENV_FILE="$PROJECT_ROOT/.env.cloudrun"
 if [ -f "$ENV_FILE" ]; then
     echo -e "${BLUE}Loading configuration from $ENV_FILE${NC}"
     # Export variables from .env.cloudrun, ignoring comments and empty lines
-    # Using a safer approach than process substitution with source
+    # Using a safer approach that handles values with '=' characters
     set -a
-    while IFS='=' read -r key value; do
+    while IFS= read -r line; do
         # Skip empty lines and comments
-        [[ -z "$key" || "$key" =~ ^[[:space:]]*# ]] && continue
-        # Remove leading/trailing whitespace and quotes
+        [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+        # Split only on first '=' to handle values containing '='
+        key="${line%%=*}"
+        value="${line#*=}"
+        # Remove leading/trailing whitespace and quotes from key
         key=$(echo "$key" | xargs)
+        # Remove leading/trailing whitespace and quotes from value
         value=$(echo "$value" | xargs | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//")
         export "$key=$value"
     done < <(grep -v '^[[:space:]]*#' "$ENV_FILE" | grep -v '^[[:space:]]*$')

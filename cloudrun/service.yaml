@@ -14,8 +14,8 @@ spec:
         autoscaling.knative.dev/minScale: '0'
         autoscaling.knative.dev/maxScale: '10'
         
-        # Cloud SQL connection (update with your instance)
-        # run.googleapis.com/cloudsql-instances: YOUR_PROJECT:YOUR_REGION:YOUR_INSTANCE
+        # Cloud SQL connection (update with your instance connection name)
+        # run.googleapis.com/cloudsql-instances: YOUR_PROJECT_ID:YOUR_REGION:YOUR_INSTANCE
         
         # Resource limits
         run.googleapis.com/cpu-throttling: 'true'
