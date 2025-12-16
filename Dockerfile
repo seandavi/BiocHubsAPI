@@ -53,4 +53,5 @@ USER appuser
 EXPOSE 8000
 
 # Run the application
-CMD ["uvicorn", "hubs_api.api_v2:app", "--host", "0.0.0.0", "--port", "8000"]
+# Support Cloud Run's PORT environment variable, default to 8000
+CMD ["sh", "-c", "uvicorn hubs_api.api_v2:app --host 0.0.0.0 --port ${PORT:-8000}"]

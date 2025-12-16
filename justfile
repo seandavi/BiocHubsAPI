@@ -106,7 +106,7 @@ deploy-ingress:
 # Delete all Kubernetes resources
 clean:
     @echo "⚠️  This will delete the entire namespace and all data!"
-    @echo -n "Are you sure? [y/N] " && read ans && [ $${ans:-N} = y ]
+    @echo -n "Are you sure? [y/N] " && read ans && [ "$${ans:-N}" = y ]
     kubectl delete namespace {{namespace}}
 
 # Restart API deployment
@@ -361,3 +361,55 @@ test-api endpoint="/":
     sleep 2
     curl -s http://localhost:8888{{endpoint}} | jq .
     kill $PF_PID
+
+# ============================================================================
+# Google Cloud Run
+# ============================================================================
+
+# Deploy to Google Cloud Run
+cloudrun-deploy:
+    @echo "Deploying to Google Cloud Run..."
+    ./cloudrun/deploy.sh
+
+# Deploy to Cloud Run without rebuilding image
+cloudrun-deploy-skip-build:
+    @echo "Deploying to Google Cloud Run (skipping build)..."
+    ./cloudrun/deploy.sh --skip-build
+
+# Deploy to Cloud Run with specific tag
+cloudrun-deploy-tag tag:
+    @echo "Deploying to Google Cloud Run with tag: {{tag}}"
+    ./cloudrun/deploy.sh --tag={{tag}}
+
+# View Cloud Run service logs
+cloudrun-logs service="biochubs-api" region="us-central1":
+    gcloud run services logs tail {{service}} --region={{region}}
+
+# Get Cloud Run service URL
+cloudrun-url service="biochubs-api" region="us-central1":
+    @gcloud run services describe {{service}} --region={{region}} --format="value(status.url)"
+
+# Test Cloud Run service health
+cloudrun-health service="biochubs-api" region="us-central1":
+    #!/usr/bin/env bash
+    URL=$(gcloud run services describe {{service}} --region={{region}} --format="value(status.url)")
+    echo "Testing health endpoint: $URL/health"
+    curl -s "$URL/health" | jq .
+
+# Update Cloud Run service configuration
+cloudrun-update service="biochubs-api" region="us-central1":
+    gcloud run services update {{service}} --region={{region}}
+
+# Delete Cloud Run service
+cloudrun-delete service="biochubs-api" region="us-central1":
+    @echo "⚠️  This will delete the Cloud Run service!"
+    @echo -n "Are you sure? [y/N] " && read ans && [ "$${ans:-N}" = y ]
+    gcloud run services delete {{service}} --region={{region}}
+
+# List Cloud Run services
+cloudrun-list region="us-central1":
+    gcloud run services list --region={{region}}
+
+# Describe Cloud Run service
+cloudrun-describe service="biochubs-api" region="us-central1":
+    gcloud run services describe {{service}} --region={{region}}
